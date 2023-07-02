@@ -2,13 +2,15 @@ const express = require("express");
 const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 5000;
+const jwt = require('jsonwebtoken')
 
 app.get("/", (req, res) => {
     res.send("hi hello")
 });
 app.use(cors());
 app.use(express.json());
-require('dotenv').config()
+require('dotenv').config();
+
 
 //////////////////////
 
@@ -25,13 +27,79 @@ const client = new MongoClient(uri, {
     }
 });
 
+function verifyJWT(req, res, next) {
+    console.log('token', req.headers.authorization);
+    const authHeadr = req.headers.authorization;
+    if (!authHeadr) {
+        return res.send(401).send(`unauthorized access`)
+    };
+
+    const token = authHeadr.split(' ')[1];
+    jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decoded) {
+        if (err) {
+            return res.status(403).send({ message: 'forbidden access' })
+        }
+        req.decoded = decoded;
+        next()
+    })
+
+}
+
 async function run() {
     try {
         const productCollection = client.db('food').collection('products');
         const drinkCollection = client.db('food').collection('drinkProducts');
         const sponsorCollection = client.db('food').collection('sponsor');
         const reviewCollection = client.db('food').collection('reviews');
+        const usersCollection = client.db('food').collection('users');
+        const ordersCollection = client.db('food').collection('orders');
 
+
+        // users
+        app.post('/users', async (req, res) => {
+            const user = req.body;
+            const result = await usersCollection.insertOne(user);
+            res.send(result)
+        })
+        //end users
+        // orders
+        app.post('/orders', async(req, res)=>{
+            const user = req.body;
+            const result = await ordersCollection.insertOne(user);
+            res.send(result)
+        });
+        app.get('/orders', async(req, res)=>{
+            const query = {};
+            const cursor = ordersCollection.find(query);
+            const users = await cursor.toArray();
+            res.send(users)
+        });
+        app.get('/order', async(req, res)=>{
+            const email = req.query.email;
+            const query = {email : email};
+            const result = await ordersCollection.find(query).toArray();
+            res.send(result)
+        });
+        app.delete('/order/:id', async(req,res)=>{
+            const id = req.params.id;
+            const query = {_id : new ObjectId(id)};
+            const result = await ordersCollection.deleteOne(query);
+            res.send(result)
+        })
+        // end orders
+
+        // JWT
+        app.get('/jwt', async (req, res) => {
+            const email = req.query.email;
+            const query = { email: email };
+            const user = await usersCollection.findOne(query);
+            if (user) {
+                const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, { expiresIn: '1h' });
+                return res.send({ accessToken: token })
+            }
+            res.status(403).send({ accessToken: '' })
+        })
+        // END jwt
 
         // products
         app.get('/product', async (req, res) => {
@@ -40,19 +108,19 @@ async function run() {
             const products = await cursor.toArray();
             res.send(products)
         });
-        app.get('/products', async(req, res)=>{
+        app.get('/products', async (req, res) => {
             const query = {};
             const cursor = productCollection.find(query);
             const products = await cursor.toArray();
             res.send(products)
         });
-        app.get('/products/:id', async(req, res)=>{
+        app.get('/products/:id', async (req, res) => {
             const id = req.params.id;
-            const query = {_id : new ObjectId(id)};
+            const query = { _id: new ObjectId(id) };
             const user = await productCollection.findOne(query);
             res.send(user)
         });
-        
+
         // ebd products
         // drink
         app.get('/drink', async (req, res) => {
@@ -61,46 +129,52 @@ async function run() {
             const products = await cursor.toArray();
             res.send(products)
         });
-        app.get('/drinks', async(req, res)=>{
+        app.get('/drinks', async (req, res) => {
             const query = {};
             const cursor = drinkCollection.find(query);
             const producs = await cursor.toArray();
             res.send(producs)
         });
-        app.get('/drinks/:id', async(req, res)=>{
+        app.get('/drinks/:id', async (req, res) => {
             const id = req.params.id;
-            const query = {_id : new ObjectId(id)};
+            const query = { _id: new ObjectId(id) };
             const user = await drinkCollection.findOne(query);
             res.send(user)
         })
         // end drink
         // review
-        app.post('/reviews',async(req, res)=>{
+        app.post('/reviews', async (req, res) => {
             const user = req.body;
             const result = await reviewCollection.insertOne(user);
             res.send(result)
         });
-        app.get('/reviews', async(req, res)=>{
+        app.get('/reviews', async (req, res) => {
             const query = {};
             const cursor = reviewCollection.find(query);
             const users = await cursor.toArray();
             res.send(users)
         })
-        app.get('/review', async(req, res)=>{
-            const email = req.params.email;
-            const query = {email : email};
+        app.get('/review', async (req, res) => {
+            const email = req.query.email;
+            const query = { email: email };
             const result = await reviewCollection.find(query).toArray();
             res.send(result)
         });
-        app.get('/reviews/:id', async(req, res)=>{
+        app.get('/reviews/:serviceId', async (req, res) => {
+            const serviceId = req.params.serviceId;
+            const query = { serviceId: serviceId };
+            const result = await reviewCollection.find(query).toArray();
+            res.send(result)
+        })
+        app.get('/reviews/:id', async (req, res) => {
             const id = req.params.id;
-            const query = {_id : new ObjectId(id)};
+            const query = { _id: new ObjectId(id) };
             const result = await reviewCollection.findOne(query);
             res.send(result)
         })
-        app.delete('/review/:id', async(req, res)=>{
+        app.delete('/review/:id', async (req, res) => {
             const id = req.params.id;
-            const query = {_id : new ObjectId(id)};
+            const query = { _id: new ObjectId(id) };
             const result = await reviewCollection.deleteOne(query);
             res.send(result)
         })
@@ -108,7 +182,7 @@ async function run() {
 
 
         // sponsor 
-        app.get('/sponsor', async(req, res)=>{
+        app.get('/sponsor', async (req, res) => {
             const query = {};
             const cursor = sponsorCollection.find(query);
             const products = await cursor.toArray();
