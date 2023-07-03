@@ -53,6 +53,7 @@ async function run() {
         const reviewCollection = client.db('food').collection('reviews');
         const usersCollection = client.db('food').collection('users');
         const ordersCollection = client.db('food').collection('orders');
+        const addProductCollection = client.db('food').collection('addProduct');
 
 
         // users
@@ -60,6 +61,18 @@ async function run() {
             const user = req.body;
             const result = await usersCollection.insertOne(user);
             res.send(result)
+        });
+        app.get('/users', async(req, res)=>{
+            const query = {};
+            const cursor = usersCollection.find(query);
+            const users = await cursor.toArray();
+            res.send(users)
+        });
+        app.delete('/users/:id', async(req, res)=>{
+            const id = req.params.id;
+            const query = {_id : new ObjectId(id)};
+            const result = await usersCollection.deleteOne(query);
+            res.send(result);
         })
         //end users
         // orders
@@ -102,7 +115,24 @@ async function run() {
         // END jwt
 
         // products
-        app.get('/product', async (req, res) => {
+        app.post('/product',async(req, res)=>{
+            const user = req.body;
+            const result = await productCollection.insertOne(user);
+            res.send(result)
+        })
+        app.get('/product', async(req, res)=>{
+            const email = req.query.email;
+            const query = {email : email};
+            const result = await productCollection.find(query).toArray();
+            res.send(result)
+        });
+        app.delete('/product/:id', async(req, res)=>{
+            const id = req.params.id;
+            const qurey = {_id : new ObjectId(id)};
+            const result = await productCollection.deleteOne(qurey);
+            res.send(result)
+        })
+        app.get('/Limitproduct', async (req, res) => {
             const query = {};
             const cursor = productCollection.find(query).limit(6);
             const products = await cursor.toArray();
@@ -179,6 +209,9 @@ async function run() {
             res.send(result)
         })
         // end review
+        // add Product
+        
+        // end add Product
 
 
         // sponsor 
