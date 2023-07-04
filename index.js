@@ -62,40 +62,40 @@ async function run() {
             const result = await usersCollection.insertOne(user);
             res.send(result)
         });
-        app.get('/users', async(req, res)=>{
+        app.get('/users', async (req, res) => {
             const query = {};
             const cursor = usersCollection.find(query);
             const users = await cursor.toArray();
             res.send(users)
         });
-        app.delete('/users/:id', async(req, res)=>{
+        app.delete('/users/:id', async (req, res) => {
             const id = req.params.id;
-            const query = {_id : new ObjectId(id)};
+            const query = { _id: new ObjectId(id) };
             const result = await usersCollection.deleteOne(query);
             res.send(result);
         })
         //end users
         // orders
-        app.post('/orders', async(req, res)=>{
+        app.post('/orders', async (req, res) => {
             const user = req.body;
             const result = await ordersCollection.insertOne(user);
             res.send(result)
         });
-        app.get('/orders', async(req, res)=>{
+        app.get('/orders', async (req, res) => {
             const query = {};
             const cursor = ordersCollection.find(query);
             const users = await cursor.toArray();
             res.send(users)
         });
-        app.get('/order', async(req, res)=>{
+        app.get('/order', async (req, res) => {
             const email = req.query.email;
-            const query = {email : email};
+            const query = { email: email };
             const result = await ordersCollection.find(query).toArray();
             res.send(result)
         });
-        app.delete('/order/:id', async(req,res)=>{
+        app.delete('/order/:id', async (req, res) => {
             const id = req.params.id;
-            const query = {_id : new ObjectId(id)};
+            const query = { _id: new ObjectId(id) };
             const result = await ordersCollection.deleteOne(query);
             res.send(result)
         })
@@ -115,20 +115,24 @@ async function run() {
         // END jwt
 
         // products
-        app.post('/product',async(req, res)=>{
+        app.post('/product', async (req, res) => {
             const user = req.body;
             const result = await productCollection.insertOne(user);
             res.send(result)
         })
-        app.get('/product', async(req, res)=>{
+        app.get('/product', verifyJWT, async (req, res) => {
             const email = req.query.email;
-            const query = {email : email};
+            const decodedEmail = req.decoded.email;
+            if(email !== decodedEmail){
+                return res.status(403).send({message : 'forbidden access'})
+            }
+            const query = { email: email };
             const result = await productCollection.find(query).toArray();
             res.send(result)
         });
-        app.delete('/product/:id', async(req, res)=>{
+        app.delete('/product/:id', async (req, res) => {
             const id = req.params.id;
-            const qurey = {_id : new ObjectId(id)};
+            const qurey = { _id: new ObjectId(id) };
             const result = await productCollection.deleteOne(qurey);
             res.send(result)
         })
@@ -210,7 +214,7 @@ async function run() {
         })
         // end review
         // add Product
-        
+
         // end add Product
 
 
