@@ -31,7 +31,7 @@ function verifyJWT(req, res, next) {
     console.log('token', req.headers.authorization);
     const authHeadr = req.headers.authorization;
     if (!authHeadr) {
-        return res.send(401).send(`unauthorized access`)
+        return res.status(401).send(`unauthorized access`)
     };
 
     const token = authHeadr.split(' ')[1];
