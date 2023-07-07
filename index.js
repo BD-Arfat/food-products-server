@@ -3,6 +3,9 @@ const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 5000;
 const jwt = require('jsonwebtoken')
+const stripe = require("stripe")('sk_test_51Mwi16SJLcYkW1Oc9sA0Pld6cSSVvHlWmgVq8Lj0cQIdx1JneIOdofEkNVX5vO2oQnkdQleTBKpkiSJWc3bwZsPt00EphQVP2q');
+
+
 
 app.get("/", (req, res) => {
     res.send("hi hello")
@@ -53,6 +56,7 @@ async function run() {
         const reviewCollection = client.db('food').collection('reviews');
         const usersCollection = client.db('food').collection('users');
         const ordersCollection = client.db('food').collection('orders');
+        const paymentsCollection = client.db('food').collection('payment');
         const addProductCollection = client.db('food').collection('addProduct');
 
 
@@ -74,19 +78,19 @@ async function run() {
             const result = await usersCollection.deleteOne(query);
             res.send(result);
         });
-        app.get('/users/admin/:email', async (req, res)=>{
+        app.get('/users/admin/:email', async (req, res) => {
             const email = req.params.email;
-            const query = {email : email};
+            const query = { email: email };
             const user = await usersCollection.findOne(query);
-            res.send({isAdmin: user?.role === 'admin'})
+            res.send({ isAdmin: user?.role === 'admin' })
         })
         app.put('/users/admin/:id', verifyJWT, async (req, res) => {
             const decodedEmail = req.decoded.email;
-            const query = {email : decodedEmail};
+            const query = { email: decodedEmail };
             const user = await usersCollection.findOne(query);
 
-            if(user?.role !== "admin"){
-                return res.status(403).send({message : 'forbidden accessToken'})
+            if (user?.role !== "admin") {
+                return res.status(403).send({ message: 'forbidden accessToken' })
             }
 
 
@@ -120,6 +124,12 @@ async function run() {
             const result = await ordersCollection.find(query).toArray();
             res.send(result)
         });
+        app.get('/orders/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const order = await ordersCollection.findOne(query);
+            res.send(order)
+        })
         app.delete('/order/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) };
@@ -128,7 +138,45 @@ async function run() {
         })
         // end orders
 
-        // JWT
+        // payment
+
+        app.post("/create-payment-intent", async (req, res) => {
+            const booking = req.body;
+            const price = booking.price;
+            const amount = price * 100;
+
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: "usd",
+                automatic_payment_methods: {
+                  enabled: true,
+                },
+              });
+
+              res.send({
+                clientSecret: paymentIntent.client_secret,
+              });
+            })
+
+
+            app.post('/payments', async(req, res)=>{
+                const payment = req.body;
+                const id = payment.bookingId;
+                const result = await paymentsCollection.insertOne(payment);
+                const filter = {_id : new ObjectId(id)};
+                const updatedDoc = {
+                  $set : {
+                    paid : true,
+                    transactionId : payment.transactionId
+                  }
+                }
+                const updateResult = await orderCollection.updateOne(filter, updatedDoc, )
+                res.send(result)
+              });
+      
+
+        // end payment
+
         app.get('/jwt', async (req, res) => {
             const email = req.query.email;
             const query = { email: email };
