@@ -66,24 +66,28 @@ async function run() {
             const result = await usersCollection.insertOne(user);
             res.send(result)
         });
+        // user get
         app.get('/users', async (req, res) => {
             const query = {};
             const cursor = usersCollection.find(query);
             const users = await cursor.toArray();
             res.send(users)
         });
+        // user delete
         app.delete('/users/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) };
             const result = await usersCollection.deleteOne(query);
             res.send(result);
         });
+        // admin
         app.get('/users/admin/:email', async (req, res) => {
             const email = req.params.email;
             const query = { email: email };
             const user = await usersCollection.findOne(query);
             res.send({ isAdmin: user?.role === 'admin' })
         })
+        // put and update
         app.put('/users/admin/:id', verifyJWT, async (req, res) => {
             const decodedEmail = req.decoded.email;
             const query = { email: decodedEmail };
